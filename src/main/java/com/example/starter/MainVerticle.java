@@ -24,18 +24,24 @@ public class MainVerticle extends AbstractVerticle {
     final ConfigStoreOptions store = new ConfigStoreOptions().setType("env");
     final ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(store);
     final ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
-    vertx.createHttpServer().requestHandler(req -> {
-      req.response()
-        .putHeader("content-type", "text/plain")
-        .end("Hello from Vert.x!");
-    }).listen(8888, http -> {
-      if (http.succeeded()) {
-        startPromise.complete();
-        System.out.println("HTTP server started on port 8888");
-      } else {
-        startPromise.fail(http.cause());
-      }
-    });
+
+    retriever.rxGetConfig()
+      .flatMap(configurations -> {
+        final MongoClient client = createMongoClient(vertx, configurations);
+
+        final UserRepository userRepository = new UserRepository(client);
+        final UserService userService = new UserService(userRepository);
+        final UserHandler userHandler = new UserHandler(userService);
+        final UserRouter userRouter = new UserRouter(vertx, userHandler);
+
+        return createHttpServer(userRouter.getRouter(), configurations);
+      })
+      .subscribe(
+        server -> System.out.println("HTTP Server listening on port " + server.actualPort()),
+        throwable -> {
+          System.out.println("Error occurred before creating a new HTTP server: " + throwable.getMessage());
+          System.exit(1);
+        });
   }
 
   // Private methods
