@@ -21,7 +21,9 @@ public class MainVerticle extends AbstractVerticle {
   @Override
   public void start(Promise<Void> startPromise) throws Exception {
 
-    final ConfigStoreOptions store = new ConfigStoreOptions().setType("env");
+    final JsonObject config = new JsonObject().put("HOST","localhost").put("USERNAME", "root")
+      .put("PASSWORD", "starter").put("AUTHSOURCE", "admin").put("HTTP_PORT", 8080).put("DB_NAME", "starter");
+    final ConfigStoreOptions store = new ConfigStoreOptions().setType("env").setConfig(config);
     final ConfigRetrieverOptions options = new ConfigRetrieverOptions().addStore(store);
     final ConfigRetriever retriever = ConfigRetriever.create(vertx, options);
 
